@@ -1,7 +1,7 @@
 package com.sunrise.study.collection.sourcecode;
 
 /**
- * 实现双向遍历
+ * 实现双向遍历的迭代器
  * @author huangzihua
  * @date 2021-08-17
  */

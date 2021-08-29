@@ -4,6 +4,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
+ * 迭代器接口（只提供单向遍历的接口）
  * 子类可以实现自己的迭代器
  * @author huangzihua
  * @date 2021-08-17
