@@ -293,8 +293,13 @@ public class WeakHashMap<K,V> extends AbstractMap<K,V> implements Map<K,V> {
      * @see #put(Object, Object)
      */
     public V get(Object key) {
+        // 判断key是否为null，是则转换为WeakHashMap内部定义的NULL_KEY对象
         Object k = maskNull(key);
+        // 计算hash值
         int h = hash(k);
+        // 这里通过getTable()获取table，是因为getTable()内部调用了
+        // expungeStaleEntries()方法，该方法会清理table中已经不用
+        // 的元素
         Entry<K,V>[] tab = getTable();
         int index = indexFor(h, tab.length);
         Entry<K,V> e = tab[index];
@@ -370,6 +375,8 @@ public class WeakHashMap<K,V> extends AbstractMap<K,V> implements Map<K,V> {
 
     /**
      * 扩容
+     * 底层实现：该方法是直接以参数newCapacity作为新容量，构建一个新的table。
+     * 而调用此方法时，传入的newCapacity值，为旧容量的2倍，且得保证是2的幂次。
      * Rehashes the contents of this map into a new array with a
      * larger capacity.  This method is called automatically when the
      * number of keys in this map reaches its threshold.
