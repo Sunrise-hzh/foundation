@@ -541,7 +541,7 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
                 else if (cmp > 0)
                     t = t.right;
                 else
-                    return t.setValue(value);
+                    return t.setValue(value);   // 找到相等的key，则覆盖旧值
             } while (t != null);
         }
 
@@ -2182,15 +2182,15 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
     static <K,V> TreeMap.Entry<K,V> successor(Entry<K,V> t) {
         if (t == null)
             return null;
-        else if (t.right != null) {     // 如果存在右子树，则从右子树中寻找后继结点
+        else if (t.right != null) {     // 如果存在右子树，则从右子树中寻找最小的元素
             Entry<K,V> p = t.right;
-            while (p.left != null)
+            while (p.left != null)      // 疯狂遍历树的左子节点，直到找到最底层的左子节点，就是最小的元素
                 p = p.left;
             return p;
-        } else {    // 若不存在右子树，则往上遍历。
+        } else {    // 若不存在右子树，则往上遍历，找到其第一个向左走的祖先
             Entry<K,V> p = t.parent;
             Entry<K,V> ch = t;
-            // 判断父节点p是否为null 且 当前节点ch是否为父节点的右子节点
+            // 判断父节点p是否为null 且 当前节点ch是否为父节点的右子节点，若是，则继续往上遍历，若不是，则p就是比t大的最小元素
             while (p != null && ch == p.right) {
                 ch = p;
                 p = p.parent;
@@ -2201,6 +2201,7 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
 
     /**
      * 返回元素的前驱节点
+     * 底层实现和上述successor()方法类似
      * Returns the predecessor of the specified Entry, or null if no such.
      */
     static <K,V> Entry<K,V> predecessor(Entry<K,V> t) {
@@ -2231,10 +2232,24 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
      * They are used to avoid messiness surrounding nullness checks in the main algorithms.
      */
 
+    /**
+     * 返回元素的颜色，若为空，则返回Black
+     * @param p
+     * @param <K>
+     * @param <V>
+     * @return
+     */
     private static <K,V> boolean colorOf(Entry<K,V> p) {
         return (p == null ? BLACK : p.color);
     }
 
+    /**
+     * 返回元素的父节点，若父节点为null则返回null
+     * @param p
+     * @param <K>
+     * @param <V>
+     * @return
+     */
     private static <K,V> Entry<K,V> parentOf(Entry<K,V> p) {
         return (p == null ? null: p.parent);
     }
@@ -2244,31 +2259,51 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
             p.color = c;
     }
 
+    /**
+     * 返回元素的左子节点，为空则返回null
+     * @param p
+     * @param <K>
+     * @param <V>
+     * @return
+     */
     private static <K,V> Entry<K,V> leftOf(Entry<K,V> p) {
         return (p == null) ? null: p.left;
     }
 
+    /**
+     * 返回元素的右子节点，为空则返回null
+     * @param p
+     * @param <K>
+     * @param <V>
+     * @return
+     */
     private static <K,V> Entry<K,V> rightOf(Entry<K,V> p) {
         return (p == null) ? null: p.right;
     }
 
     /**
-     * 左旋操作
-     * From CLR
+     * 左旋操作 From CLR
      */
     private void rotateLeft(Entry<K,V> p) {
         if (p != null) {
+            // r是p的右子节点
             Entry<K,V> r = p.right;
+
+            // 把 r 的左子节点赋值给 p 的右子节点，此时 r 和 p 断开绑定了
             p.right = r.left;
             if (r.left != null)
                 r.left.parent = p;
+
+            // 让r取代p原来所处的位置
             r.parent = p.parent;
             if (p.parent == null)
-                root = r;
+                root = r;   // 如果p.parent是null，说明p是根节点，则现在r就成了根节点
             else if (p.parent.left == p)
                 p.parent.left = r;
             else
                 p.parent.right = r;
+
+            // 连接上r和p的关系
             r.left = p;
             p.parent = r;
         }
@@ -2291,8 +2326,13 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
         }
     }
 
-    /** 插入元素后，调整指定元素x的位置，以保持红黑树的特性  From CLR */
+    /**
+     * 插入元素后，调整指定元素x的位置，以保持红黑树的特性
+     * 该方法为私有方法，目前只有当前类的put()方法会调用。
+     * From CLR
+     */
     private void fixAfterInsertion(Entry<K,V> x) {
+        // 先把插入节点设为红色
         x.color = RED;
 
         while (x != null && x != root && x.parent.color == RED) {
@@ -2330,20 +2370,24 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
                 }
             }
         }
+
+        // 无论如何调整，根节点都是黑色
         root.color = BLACK;
     }
 
     /**
+     * 删除一个节点，然后调整树平衡
      * Delete node p, and then rebalance the tree.
      */
     private void deleteEntry(Entry<K,V> p) {
         modCount++;
         size--;
 
+        // 待删除的p元素的两个子节点都不为空
         // If strictly internal, copy successor's element to p and then make p
         // point to successor.
         if (p.left != null && p.right != null) {
-            Entry<K,V> s = successor(p);
+            Entry<K,V> s = successor(p);    // 取后继结点
             p.key = s.key;
             p.value = s.value;
             p = s;
@@ -2384,7 +2428,7 @@ public class TreeMap<K, V> extends AbstractMap<K,V> implements NavigableMap<K,V>
         }
     }
 
-    /** From CLR */
+    /** 再删除元素后，调整树平衡 From CLR */
     private void fixAfterDeletion(Entry<K,V> x) {
         while (x != root && colorOf(x) == BLACK) {
             if (x == leftOf(parentOf(x))) {
