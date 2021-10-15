@@ -1,9 +1,10 @@
 package com.sunrise.study.thread.demo;
 
-import com.sunrise.study.thread.sourcecode.Condition;
-import com.sunrise.study.thread.sourcecode.ReentrantLock;
+
 
 import java.lang.reflect.Field;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author huangzihua

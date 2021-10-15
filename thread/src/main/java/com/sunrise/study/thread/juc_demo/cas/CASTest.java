@@ -1,4 +1,4 @@
-package com.sunrise.study.thread.juc.cas;
+package com.sunrise.study.thread.juc_demo.cas;
 
 import com.sunrise.study.thread.create.Money;
 

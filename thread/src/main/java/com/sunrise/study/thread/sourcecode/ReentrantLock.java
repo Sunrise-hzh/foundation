@@ -4,6 +4,10 @@ import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * ReentrantLock的底层是使用AQS实现的可重入独占锁。
+ * 在这里AQS状态值为0表示当前锁空闲，为大于等于1的值则说明该锁已经被占用。
+ * 该锁内部有公平与非公平实现，默认情况下是非公平的实现。
+ * 另外，由于该锁是独占锁，所以某时只有一个线程可以获取该锁。
  * @author huangzihua
  * @date 2021-08-10
  */
@@ -42,8 +46,9 @@ public class ReentrantLock implements Lock {
             }
             // 如果state不为0，说明有线程在占用，则判断该占用线程是否为当前线程
             else if (current == getExclusiveOwnerThread()) {
-                // 如果是当前线程是独占线程，则计算AQS的state值。（可看作增加重入次数）
+                // 如果当前线程是独占线程，则计算AQS的state值。（增加重入次数）
                 int nextc = c + acquires;
+                // 如果nextc < 0说明重入次数溢出了
                 if (nextc < 0) // overflow
                     throw new Error("Maximum lock count exceeded");
                 setState(nextc);    // 更新AQS的state
@@ -115,6 +120,8 @@ public class ReentrantLock implements Lock {
     }
 
     /**
+     * 实现非公平锁
+     * 继承ReentrantLock内部类Sync
      * Sync object for non-fair locks
      */
     static final class NonfairSync extends Sync {
@@ -125,7 +132,7 @@ public class ReentrantLock implements Lock {
          * acquire on failure.
          */
         final void lock() {
-            // CAS修改AQS的state，改为1
+            // CAS修改AQS的state，把0改为1
             if (compareAndSetState(0, 1))
                 // 如果修改成功，说明当前线程成功占用当前锁
                 setExclusiveOwnerThread(Thread.currentThread());
@@ -135,12 +142,15 @@ public class ReentrantLock implements Lock {
                 acquire(1);
         }
 
+        // 以非公平方式获取锁资源
         protected final boolean tryAcquire(int acquires) {
             return nonfairTryAcquire(acquires);
         }
     }
 
     /**
+     * 公平锁实现
+     * 继承ReentrantLock的内部类Sync
      * Sync object for fair locks
      */
     static final class FairSync extends Sync {
@@ -207,6 +217,7 @@ public class ReentrantLock implements Lock {
     }
 
     /**
+     * 获取独占锁，忽略中断。实际是调用内部类Sync（此类是AQS的实现类）的lock()方法。
      * Acquires the lock.
      *
      * <p>Acquires the lock if it is not held by another thread and returns
@@ -225,6 +236,8 @@ public class ReentrantLock implements Lock {
     }
 
     /**
+     * 获取独占锁，可中断。实际是调用内部类Sync（此类是AQS的实现类）的acquireInterruptibly()方法
+     *
      * Acquires the lock unless the current thread is
      * {@linkplain Thread#interrupt interrupted}.
      *
@@ -275,6 +288,9 @@ public class ReentrantLock implements Lock {
     }
 
     /**
+     * 尝试获取锁。该方式不会造成当前线程阻塞。
+     * 只是在调用该方法的瞬间，试一下获取锁资源，如果获取失败就返回false，获取成功则返回true。
+     * 实际就是调用Sync的nonfairTryAcquire()方法。
      * Acquires the lock only if it is not held by another thread at the time
      * of invocation.
      *
@@ -305,6 +321,8 @@ public class ReentrantLock implements Lock {
     }
 
     /**
+     * 尝试获取锁，与tryLock（）的不同之处在于，它设置了超时时间，
+     * 如果超时时间到没有获取到该锁则返回false。
      * Acquires the lock if it is not held by another thread within the given
      * waiting time and the current thread has not been
      * {@linkplain Thread#interrupt interrupted}.
@@ -378,10 +396,12 @@ public class ReentrantLock implements Lock {
      */
     public boolean tryLock(long timeout, TimeUnit unit)
             throws InterruptedException {
+        // 调用AQS的tryAcquireNanos()方法
         return sync.tryAcquireNanos(1, unit.toNanos(timeout));
     }
 
     /**
+     * 释放锁资源，实际是调用内部类Sync的release()方法
      * Attempts to release this lock.
      *
      * <p>If the current thread is the holder of this lock then the hold

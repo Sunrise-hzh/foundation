@@ -15,6 +15,7 @@
         <module>reflect</module>
         <module>temp</module>
         <module>collection</module>
+        <module>jvm</module>
     </modules>
 
 

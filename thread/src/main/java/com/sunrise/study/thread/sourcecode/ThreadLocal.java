@@ -38,7 +38,8 @@ public class ThreadLocal<T> {
     }
 
     /**
-     * 初始化ThreadLocal的值
+     * 初始化ThreadLocal的值，其子类可以重写该方法
+     * 例如：ReentrantReadWriteLock下的内部类ThreadLocalHoldCounter
      */
     protected T initialValue() {
         return null;
@@ -71,11 +72,12 @@ public class ThreadLocal<T> {
      * @return the current thread's value of this thread-local
      */
     public T get() {
-        // 取当前线程
+        // 取当前线程实例
         Thread t = Thread.currentThread();
 
-        // 每个线程有一个变量threadLocals，存放的是当前的线程的ThreadLocalMap对象
-        ThreadLocalMap map = getMap(t);
+        // 每个线程有一个变量threadLocals，存放的是当前线程的ThreadLocalMap对象
+        // 这里获取当前Thread中的threadLocals变量
+        ThreadLocalMap map = getMap(t);         // 执行代码：return t.threadLocals;
         if (map != null) {
             // 如果map不为null，则调取getEntry方法获取Table元素
             ThreadLocalMap.Entry e = map.getEntry(this);
@@ -114,12 +116,17 @@ public class ThreadLocal<T> {
      *        this thread-local.
      */
     public void set(T value) {
+        // 获取当前线程
         Thread t = Thread.currentThread();
+
+        // 获取当前线程的threadLocals变量
         ThreadLocalMap map = getMap(t);
         if (map != null)
+            // this只是当前ThreadLocal实例，value就是要保存的值
             map.set(this, value);
         else
-            createMap(t, value);
+            // 若当前线程的threadLocals变量为null，则执行createMap()方法进行初始化
+            createMap(t, value);    // t.threadLocals = new ThreadLocalMap(this, firstValue);
     }
 
     /**
@@ -135,6 +142,7 @@ public class ThreadLocal<T> {
 
     /**
      * 取当前线程的threadLocals值
+     *
      * Get the map associated with a ThreadLocal.
      * Overridden in InheritableThreadLocal.
      *
@@ -143,7 +151,9 @@ public class ThreadLocal<T> {
      */
     ThreadLocalMap getMap(Thread t) {
 //        return t.threadLocals;
-        return null;    // 为保证当前项目可以跑加的
+
+        // 这里真实执行的是上面那条代码，为保证当前项目可以运行、没红线才注释掉
+        return null;
     }
 
     /**
@@ -207,7 +217,7 @@ public class ThreadLocal<T> {
     static class ThreadLocalMap {
 
         /**
-         * Entry继承了弱引用 WeakReference类
+         * Entry继承了弱引用 WeakReference类，并增加一个变量value，用于保存映射值
          * 被弱引用关联的对象只能生存到下一次垃圾收集发生之前。
          * 当垃圾收集器工作时，无论当前内存是否足够，都会回收掉只被弱引用关联的对象
          */
@@ -226,7 +236,8 @@ public class ThreadLocal<T> {
         private static final int INITIAL_CAPACITY = 16;
 
         /**
-         * Entry数组，可调整大小。其长度必须是2的幂次
+         * Entry数组，存放ThreadLocal元素
+         * 底层实现了自动扩容。其长度必须是2的幂次
          */
         private Entry[] table;
 
@@ -361,7 +372,9 @@ public class ThreadLocal<T> {
         }
 
         /**
-         * 往table插入值
+         * 往hash table插入值
+         * 底层实现是：通过hash算法计算存储索引，若hash冲突，则通过开放寻址法寻找一个存储索引
+         * 如果插入新元素后，容量达到阔值，则先清理一遍旧元素，如果清理后容量仍然超过阔值，再进行扩容处理
          * Set the value associated with key.
          *
          * @param key the thread local object
@@ -376,29 +389,30 @@ public class ThreadLocal<T> {
 
             Entry[] tab = table;
             int len = tab.length;
-            int i = key.threadLocalHashCode & (len-1);  // 通过hash code计算索引
+            // 通过hash code计算索引（即在Entry[] table中的位置）
+            int i = key.threadLocalHashCode & (len-1);
 
             /*
                 遍历table数组
                 大致逻辑是：
                     1、先看看table[i]是否为null，是则结束循环
                     2、table[i]不是null，则判断table[i].key和传入的key是不是同一个，是则覆盖旧值
-                    3、不是则判断是否为null，是null则调用replaceStaleEntry方法设置值
-                    4、table[i].key不是null且也不是传入的key，说明这个索引有值了，i++回到步骤1
+                    3、不是则判断table[i].key是否为null，是null则调用replaceStaleEntry方法设置值
+                    4、table[i].key不是null且也不是传入的key，说明这个索引有值了，则i++回到步骤1
              */
             for (Entry e = tab[i];
                  e != null;
                  e = tab[i = nextIndex(i, len)]) {
-                // 取元素e的关联引用
+                // 取元素e的关联引用，也就是key对象
                 ThreadLocal<?> k = e.get();
 
-                // 如果key相同，说明原来就有值，则覆盖原来的值，直接结束方法
+                // 如果key相同，说明原来就有值，则覆盖原来的value值，然后结束方法
                 if (k == key) {
                     e.value = value;
                     return;
                 }
 
-                // 如果key为空，则调replaceStaleEntry方法设置值，方法结束
+                // 如果key为空，但元素e存在，可能是被回收了，则调replaceStaleEntry方法设置值，方法结束
                 if (k == null) {
                     // 替换旧元素
                     replaceStaleEntry(key, value, i);
@@ -580,7 +594,7 @@ public class ThreadLocal<T> {
             // 删掉所有废弃的元素，即ThreadLocal引用为null
             expungeStaleEntries();
 
-            // 判断size 达到扩容阔值threshold的四分之一，是则扩容
+            // 判断size 达到扩容阔值threshold的四分之三，是则扩容
             if (size >= threshold - threshold / 4)
                 resize();
         }
@@ -592,10 +606,11 @@ public class ThreadLocal<T> {
         private void resize() {
             Entry[] oldTab = table;
             int oldLen = oldTab.length;
-            int newLen = oldLen * 2;
+            int newLen = oldLen * 2;      // 新容量是原来的2倍
             Entry[] newTab = new Entry[newLen];
             int count = 0;
 
+            // 重新计算hash值，迁移旧table的元素到新table中
             for (int j = 0; j < oldLen; ++j) {
                 Entry e = oldTab[j];
                 if (e != null) {
