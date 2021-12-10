@@ -8,12 +8,13 @@ import java.util.function.Consumer;
 
 /**
  * LinkedBlockingQueue总结：
- *   1.基于单向链表的阻塞线程安全队列；有界，可设定最大容量；
+ *   1.基于单向链表的阻塞线程安全队列；有界，可设定最大容量；FIFO排序；
  *   2.底层使用了可重入锁ReentrantLock，定义了两个锁：putLock和takeLock；
  *   3.putLock锁用于尾结点操作（如put、offer方法），takeLock锁用于头结点操作（如poll、peek、take方法)；
  *   4.由于实现了两个锁，所以插入元素和弹出元素可以同时进行，但每个操作只能有一个线程执行，其他线程会阻塞；
  *   5.队列的notEmpty和notFull属性是Condition对象，当队列为空或满时，取元素或插入元素会阻塞；
  *   6.实现的是生产-消费模型；
+ *   7.吞吐量通常要高于ArrayBlockingQueue；
  *
  * An optionally-bounded {@linkplain BlockingQueue blocking queue} based on
  * linked nodes.

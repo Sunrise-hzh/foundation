@@ -8,6 +8,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
+ * PriorityBlockingQueue总结：
+ *   1、带优先级的无界阻塞队列，每次出队都返回优先级最高或最低的元素；
+ *   2、内部数据结构就是平衡二叉树，即最小堆；
+ *   3、默认使用对象的compareTo方法提供比较规则，或根据需要提供Comparator实现类；
+ *   4、内部维护一个queue数组，存放队列元素；
+ *   5、扩容时会释放独占锁，改为通过CAS方式获取自旋锁allocationSpinLock；
+ *
  * An unbounded {@linkplain BlockingQueue blocking queue} that uses
  * the same ordering rules as class {@link PriorityQueue} and supplies
  * blocking retrieval operations.  While this queue is logically

@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * ArrayBlockingQueue总结：
- *   1.基于数组的线程安全的有界队列；
+ *   1.基于数组的线程安全的有界队列；FIFO排序；
  *   2.使用全局锁实现线程安全，同时只能有一个线程进行入队、出队操作；
  *   3.底层数组是一个循环数组，队列的头尾位置通过takeIndex和putIndex属性标记；
  *

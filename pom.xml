@@ -16,6 +16,7 @@
         <module>temp</module>
         <module>collection</module>
         <module>jvm</module>
+        <module>encryption</module>
     </modules>
 
 
